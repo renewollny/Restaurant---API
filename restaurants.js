@@ -4,6 +4,8 @@ const app = express();
 const port = 3000;
 const hostname = "localhost";
 
+
+// Prüfung, ob Element bereits vorhanden ist
 const exists = (name) => {
     let result = restaurants.find((elem) => {
         if (elem.name == r.name) {
@@ -24,6 +26,7 @@ let restaurants = [{
 }];
 
 
+// Index des Restaurants finden für die weitere Verwendung
 function getIndex(name) {
     let index = -1;
     for (let i = 0; i < restaurants.length; i++) {
@@ -35,6 +38,7 @@ function getIndex(name) {
 };
 
 
+// Funktion zum Löschen eines Restaurants
 function delRestaurant(name) {
     const index = getIndex(name);
     let deletedRest = restaurants.splice(index, 1);
@@ -42,6 +46,7 @@ function delRestaurant(name) {
 };
 
 
+// Funktion zum Hinzufügen eines Restaurants
 function createRestaurant(neu) {
     restaurants.push(neu);
 };
@@ -57,6 +62,7 @@ app.get("/restaurants", (_, res) => {
 });
 
 
+// Ein neues Restaurant hinzufügen, wenn es nicht vorhanden ist
 app.post("/restaurant", (req, res) => {
     let r = req.body;
     if (!r.name || !r.address || !r.category) {
@@ -77,6 +83,7 @@ app.post("/restaurant", (req, res) => {
 });
 
 
+// Ein Restaurant suchen
 app.get("/restaurant/:name", (req, res) => {
     // Undefined Variable für Resultat der Suche anlegen
     let result;
@@ -98,6 +105,7 @@ app.get("/restaurant/:name", (req, res) => {
 });
 
 
+// Aktualisierung eines Restaurants
 app.put("/restaurant/:name", (req, res) => {
     if (getIndex(req.params.name) != -1) {
         const r = req.body;
@@ -118,6 +126,7 @@ app.put("/restaurant/:name", (req, res) => {
 });
 
 
+// Ein Restaurant löschen
 app.delete("/restaurant/:name", (req, res) => {
     if (getIndex(req.params.name) != -1) {
         let del = delRestaurant(req.params.name);
