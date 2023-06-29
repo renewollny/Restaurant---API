@@ -1,4 +1,4 @@
-const { MongoClient } = require("mongodb");
+const sqlite3 = require("better-sqlite3");
 const express = require("express");
 const app = express();
 
@@ -6,55 +6,18 @@ const port = 3000;
 const hostname = "localhost";
 
 
-// MongoDB-Verbindung
-const uri = "mongodb+srv://renewollny:@cluster0.frgwjd3.mongodb.net/?retryWrites=true&w=majority";
-const client = new MongoClient(uri);
-client.connect();
-const db = client.db("database");
-const coll = db.collection("restaurant");
-client.connect().then(() => console.log("Connected to MongoDB"));
+// SQLite-Verbindung
+let db = new sqlite3("restaurants");
+console.log("Mit SQL-Datenbank verbunden.")
+
+db.prepare("CREATE TABLE IF NOT EXISTS restaurant (rest_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, address TEXT NOT NULL, category TEXT NOT NULL)").run();
 
 
-// Prüfung, ob Element bereits vorhanden ist
-const exists = (name) => {
-    let result = restaurants.find((elem) => {
-        if (elem.name == r.name) {
-            return true;
-        }
-    });
-    if (result) {
-        return true;
-    } else {
-        return false;
-    }
-};
-
-let restaurants = [];
-
-
-// Index des Restaurants finden für die weitere Verwendung
-function getIndex(name) {
-    let index = -1;
-    for (let i = 0; i < restaurants.length; i++) {
-        if (restaurants[i].name == name) {
-            index = i;
-        };
-    };
-    return index;
-};
-
-
-// Funktion zum Löschen eines Restaurants
-function delRestaurant(name) {
-    const index = getIndex(name);
-    let deletedRest = restaurants.splice(index, 1);
-    return deletedRest;
-};
-
-
-// Funktion zum Hinzufügen eines Restaurants
-function createRestaurant(neu) {
-    restaurants.push(neu);
+// Restaurant mittels Name finden
+function findRestaurant(name) {
+    const search = db.prepare(`SELECT * FROM restaurant WHERE name = ?`);
+    const finalSearch = search.all(name);
+    return finalSearch;
 };
 
 
@@ -64,24 +27,30 @@ app.use(express.json());
 /* API-Endpunkte */
 // wenn req nicht benutzt wird, kann auch ein "_" geschrieben werden
 // Liste aller Restaurants
-app.get("/restaurants", async function(_,res) {
-    let r = await coll.find().toArray();
+app.get("/restaurants", (req, res) => {
     res.status(200);
-    res.send(r);
+    res.send(db.prepare("SELECT * FROM restaurant").all());
 });
 
 
 // Ein neues Restaurant hinzufügen, wenn es nicht vorhanden ist
-app.post("/restaurant", async function(_,res) {
-    const r = [{"name": "Bobs Burger", "address": "Weg3", "category": "döner"}, {"name": "Chicken", "address": "Straße2", "category": "fastfood"}];
+/* GEHT NICHT!!! siehe Code-Zeile 51 */
+app.post("/restaurant", (req, res) => {
+    const r = req.body;
+    // rest_name = r.name;
+    // rest_address = r.address;
+    // rest_category = r.category;
+    // Überprüfung, ob alle Werte des neuen Restaurants mitgegeben wurden sind
     if (!r.name || !r.address || !r.category) {
         res.send("Objekt ist nicht vollständig");
     } else {
         // Überprüfung, ob das Element bereits in der Liste Restaurants existiert
-        let e = exists(r.name);
-        if (e = false) {
+        let e = findRestaurant(r.name);
+        if (e.length === 0) {
             // Element hinzufügen
-            await coll.insertMany(r);
+            /* GEHT NICHT!!! SQL-Statemenet funktioniert in TablePlus, aber hier
+            kommt Fehlermeldung "Too few parameter values were provided" */
+            db.prepare("INSERT INTO restaurant (name, address, category) VALUES (?,?,?)", (rest_name, rest_address, rest_category)).run();
             res.status(201);
             res.send("Restaurant wurde hinzugefügt");
         } else {
@@ -94,19 +63,10 @@ app.post("/restaurant", async function(_,res) {
 
 // Ein Restaurant suchen
 app.get("/restaurant/:name", (req, res) => {
-    // Undefined Variable für Resultat der Suche anlegen
-    let result;
-    // Prüfen, ob Restaurant in Liste vorhanden ist
-    restaurants.forEach((elem) => {
-        // wenn Restaurant vorhanden, Restaurant-Daten in Resultat-Variable speichern
-        if (elem.name === req.params.name) {
-            result = elem;
-        };
-    });
-    // Ergebnis der Suche zurückgeben
-    if (result) {
+    const r = findRestaurant(req.params.name);
+    if (r.length > 0) {
         res.status(200);
-        res.send(result)
+        res.send(r);    
     } else {
         res.status(404);
         res.send("Restaurant existiert nicht.");
@@ -115,31 +75,39 @@ app.get("/restaurant/:name", (req, res) => {
 
 
 // Aktualisierung eines Restaurants
+/* GEHT NICHT!!! Fehlermeldung "Cannot PUT /restaurant"; GET-Methoden funktionieren, und Name des Restaurants ist in der DB
+vorhanden */
 app.put("/restaurant/:name", (req, res) => {
-    if (getIndex(req.params.name) != -1) {
-        const r = req.body;
+    const r = findRestaurant(req.params.name);
+    const n = req.body;
+    if (r.length > 0) {
         if (r.name && r.address && r.category) {
-            delRestaurant(r.name);
-            createRestaurant(r);
+            const update = db.prepare(`UPDATE restaurant SET name = ${n.name}, address = ${n.address}, category = ${n.category} WHERE name = ?`);
+            const finalUpdate = update.all(req.params.name);
             res.status(200);
-            res.send(r);
-            // console.log(`Aktualisiere ${req.params.name}: ${r.name}, ${r.adresse}, ${r.kategorie}.`);
+            res.send(finalUpdate);
         } else {
             res.status(400);
             res.send("Daten unvollständig, nicht aktualisiert.");
-        }
+        };
     } else {
-        res.status(404);
-        res.send("Restaurant nicht gefunden.");
-    };
+            res.status(404);
+            res.send("Restaurant nicht gefunden.");
+        };
 });
 
 
+
 // Ein Restaurant löschen
+/* GEHT NICHT!!! Fehlermeldung "Cannot DELETE /restaurant"; GET-Methoden funktionieren, und Name des Restaurants ist in der DB
+vorhanden */
 app.delete("/restaurant/:name", (req, res) => {
-    if (getIndex(req.params.name) != -1) {
-        let del = delRestaurant(req.params.name);
-        res.send("Folgendes Restaurant wurde gelöscht " + JSON.stringify(del));
+    const r = findRestaurant(req.params.name);
+    if (r.length > 0) {
+        const del = db.prepare("DELETE FROM restaurant WHERE name = ?");
+        const finalDel = del.all(req.params.name);
+        res.status(200);
+        res.send("Restaurant wurde gelöscht.");
     } else {
         res.status(404);
         res.send("Restaurant nicht gefunden.");
@@ -155,7 +123,7 @@ app.listen(port, hostname, () => {
 
 // Datenbank-Verbindung beim Beenden des Servers schließen
 process.on("SIGINT", () => {
-    client.close();
+    db.close();
     console.log("database connection closed");
     process.exit();
 })
