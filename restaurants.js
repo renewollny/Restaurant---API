@@ -72,8 +72,8 @@ app.get("/restaurants", async function(_,res) {
 
 
 // Ein neues Restaurant hinzufügen, wenn es nicht vorhanden ist
-app.post("/restaurant", async function(_,res) {
-    const r = [{"name": "Bobs Burger", "address": "Weg3", "category": "döner"}, {"name": "Chicken", "address": "Straße2", "category": "fastfood"}];
+app.post("/restaurant", async function(req,res) {
+    const r = req.body;
     if (!r.name || !r.address || !r.category) {
         res.send("Objekt ist nicht vollständig");
     } else {
@@ -81,7 +81,7 @@ app.post("/restaurant", async function(_,res) {
         let e = exists(r.name);
         if (e = false) {
             // Element hinzufügen
-            await coll.insertMany(r);
+            await coll.insertOne(r);
             res.status(201);
             res.send("Restaurant wurde hinzugefügt");
         } else {
