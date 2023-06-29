@@ -7,7 +7,7 @@ const hostname = "localhost";
 
 
 // MongoDB-Verbindung
-const uri = "mongodb+srv://renewollny:dirk4mvp@cluster0.frgwjd3.mongodb.net/?retryWrites=true&w=majority";
+const uri = "mongodb+srv://renewollny:@cluster0.frgwjd3.mongodb.net/?retryWrites=true&w=majority";
 const client = new MongoClient(uri);
 client.connect();
 const db = client.db("database");
@@ -29,11 +29,7 @@ const exists = (name) => {
     }
 };
 
-let restaurants = [{
-    "name": "restaurant1",
-    "address": "kindergarten1",
-    "category": "burger"
-}];
+let restaurants = [];
 
 
 // Index des Restaurants finden für die weitere Verwendung
@@ -76,8 +72,8 @@ app.get("/restaurants", async function(_,res) {
 
 
 // Ein neues Restaurant hinzufügen, wenn es nicht vorhanden ist
-app.post("/restaurant", (req, res) => {
-    let r = req.body;
+app.post("/restaurant", async function(_,res) {
+    const r = [{"name": "Bobs Burger", "address": "Weg3", "category": "döner"}, {"name": "Chicken", "address": "Straße2", "category": "fastfood"}];
     if (!r.name || !r.address || !r.category) {
         res.send("Objekt ist nicht vollständig");
     } else {
@@ -85,7 +81,7 @@ app.post("/restaurant", (req, res) => {
         let e = exists(r.name);
         if (e = false) {
             // Element hinzufügen
-            restaurants.push(r);
+            await coll.insertMany(r);
             res.status(201);
             res.send("Restaurant wurde hinzugefügt");
         } else {
