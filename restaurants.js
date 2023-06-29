@@ -1,8 +1,18 @@
+const { MongoClient } = require("mongodb");
 const express = require("express");
 const app = express();
 
 const port = 3000;
 const hostname = "localhost";
+
+
+// MongoDB-Verbindung
+const uri = "mongodb+srv://renewollny:dirk4mvp@cluster0.frgwjd3.mongodb.net/?retryWrites=true&w=majority";
+const client = new MongoClient(uri);
+client.connect();
+const db = client.db("database");
+const coll = db.collection("restaurant");
+client.connect().then(() => console.log("Connected to MongoDB"));
 
 
 // Prüfung, ob Element bereits vorhanden ist
@@ -55,10 +65,13 @@ function createRestaurant(neu) {
 app.use(express.json());
 
 
+/* API-Endpunkte */
 // wenn req nicht benutzt wird, kann auch ein "_" geschrieben werden
-app.get("/restaurants", (_, res) => {
+// Liste aller Restaurants
+app.get("/restaurants", async function(_,res) {
+    let r = await coll.find().toArray();
     res.status(200);
-    res.send(restaurants);
+    res.send(r);
 });
 
 
@@ -138,6 +151,15 @@ app.delete("/restaurant/:name", (req, res) => {
 });
 
 
+// Server starten
 app.listen(port, hostname, () => {
     console.log(`Server gestartet ${hostname}:${port}`);
 });
+
+
+// Datenbank-Verbindung beim Beenden des Servers schließen
+process.on("SIGINT", () => {
+    client.close();
+    console.log("database connection closed");
+    process.exit();
+})

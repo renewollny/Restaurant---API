@@ -1,12 +1,12 @@
 {
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "mongodb": "^5.6.0"
   },
   "name": "restaurants",
   "version": "1.0.0",
   "description": "API für Aufslistung von Restaurants",
   "main": "restaurants.js",
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
